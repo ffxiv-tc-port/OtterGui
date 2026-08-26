@@ -204,7 +204,7 @@ public class FrameworkManager : IDisposable, IService
                 dict.Clear();
             }
 
-            Task.WaitAll(tasks);
+            Task.WaitAll(tasks, TimeSpan.FromSeconds(5));
         }
     }
 }
