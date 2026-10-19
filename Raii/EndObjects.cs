@@ -8,6 +8,10 @@ namespace OtterGui.Raii;
 // when created with using variables.
 public static partial class ImRaii
 {
+    // What every EndConditionally without success is returned as: it has nothing to end, so one object serves all.
+    // It is disposed up front; a later Dispose returns at the first check and never writes to it.
+    private static readonly IEndObject FailedEnd = CreateFailedEnd();
+
     private static int _disabledCount = 0;
 
     public static IEndObject CollapsingHeader(string label)
@@ -36,40 +40,40 @@ public static partial class ImRaii
         => new EndUnconditionally(ImGui.EndChild, ImGui.BeginChild(strId, size, border, flags));
 
     public static IEndObject DragDropTarget()
-        => new EndConditionally(ImGui.EndDragDropTarget, ImGui.BeginDragDropTarget());
+        => Conditional(ImGui.EndDragDropTarget, ImGui.BeginDragDropTarget());
 
     public static IEndObject DragDropSource()
-        => new EndConditionally(ImGui.EndDragDropSource, ImGui.BeginDragDropSource());
+        => Conditional(ImGui.EndDragDropSource, ImGui.BeginDragDropSource());
 
     public static IEndObject DragDropSource(ImGuiDragDropFlags flags)
-        => new EndConditionally(ImGui.EndDragDropSource, ImGui.BeginDragDropSource(flags));
+        => Conditional(ImGui.EndDragDropSource, ImGui.BeginDragDropSource(flags));
 
     public static IEndObject Popup(string id)
-        => new EndConditionally(ImGui.EndPopup, ImGui.BeginPopup(id));
+        => Conditional(ImGui.EndPopup, ImGui.BeginPopup(id));
 
     public static IEndObject Popup(string id, ImGuiWindowFlags flags)
-        => new EndConditionally(ImGui.EndPopup, ImGui.BeginPopup(id, flags));
+        => Conditional(ImGui.EndPopup, ImGui.BeginPopup(id, flags));
 
     public static IEndObject ContextPopupItem()
-        => new EndConditionally(ImGui.EndPopup, ImGui.BeginPopupContextItem(default));
+        => Conditional(ImGui.EndPopup, ImGui.BeginPopupContextItem(default));
 
     public static IEndObject ContextPopupItem(string label)
-        => new EndConditionally(ImGui.EndPopup, ImGui.BeginPopupContextItem(label));
+        => Conditional(ImGui.EndPopup, ImGui.BeginPopupContextItem(label));
 
     public static IEndObject ContextPopupItem(string label, ImGuiPopupFlags flags)
-        => new EndConditionally(ImGui.EndPopup, ImGui.BeginPopupContextItem(label, flags));
+        => Conditional(ImGui.EndPopup, ImGui.BeginPopupContextItem(label, flags));
 
     public static IEndObject ContextPopup(string id)
-        => new EndConditionally(ImGui.EndPopup, ImGui.BeginPopupContextWindow(id));
+        => Conditional(ImGui.EndPopup, ImGui.BeginPopupContextWindow(id));
 
     public static IEndObject ContextPopup(string id, ImGuiPopupFlags flags)
-        => new EndConditionally(ImGui.EndPopup, ImGui.BeginPopupContextWindow(id, flags));
+        => Conditional(ImGui.EndPopup, ImGui.BeginPopupContextWindow(id, flags));
 
     public static IEndObject Combo(string label, string previewValue)
-        => new EndConditionally(ImGui.EndCombo, ImGui.BeginCombo(label, previewValue));
+        => Conditional(ImGui.EndCombo, ImGui.BeginCombo(label, previewValue));
 
     public static IEndObject Combo(string label, string previewValue, ImGuiComboFlags flags)
-        => new EndConditionally(ImGui.EndCombo, ImGui.BeginCombo(label, previewValue, flags));
+        => Conditional(ImGui.EndCombo, ImGui.BeginCombo(label, previewValue, flags));
 
     public static IEndObject Group()
     {
@@ -84,46 +88,46 @@ public static partial class ImRaii
     }
 
     public static IEndObject ListBox(string label)
-        => new EndConditionally(ImGui.EndListBox, ImGui.BeginListBox(label));
+        => Conditional(ImGui.EndListBox, ImGui.BeginListBox(label));
 
     public static IEndObject ListBox(string label, Vector2 size)
-        => new EndConditionally(ImGui.EndListBox, ImGui.BeginListBox(label, size));
+        => Conditional(ImGui.EndListBox, ImGui.BeginListBox(label, size));
 
     public static IEndObject Table(string table, int numColumns)
-        => new EndConditionally(ImGui.EndTable, ImGui.BeginTable(table, numColumns));
+        => Conditional(ImGui.EndTable, ImGui.BeginTable(table, numColumns));
 
     public static IEndObject Table(string table, int numColumns, ImGuiTableFlags flags)
-        => new EndConditionally(ImGui.EndTable, ImGui.BeginTable(table, numColumns, flags));
+        => Conditional(ImGui.EndTable, ImGui.BeginTable(table, numColumns, flags));
 
     public static IEndObject Table(string table, int numColumns, ImGuiTableFlags flags, Vector2 outerSize)
-        => new EndConditionally(ImGui.EndTable, ImGui.BeginTable(table, numColumns, flags, outerSize));
+        => Conditional(ImGui.EndTable, ImGui.BeginTable(table, numColumns, flags, outerSize));
 
     public static IEndObject Table(string table, int numColumns, ImGuiTableFlags flags, Vector2 outerSize, float innerWidth)
-        => new EndConditionally(ImGui.EndTable, ImGui.BeginTable(table, numColumns, flags, outerSize, innerWidth));
+        => Conditional(ImGui.EndTable, ImGui.BeginTable(table, numColumns, flags, outerSize, innerWidth));
 
     public static IEndObject TabBar(string label)
-        => new EndConditionally(ImGui.EndTabBar, ImGui.BeginTabBar(label));
+        => Conditional(ImGui.EndTabBar, ImGui.BeginTabBar(label));
 
     public static IEndObject TabBar(string label, ImGuiTabBarFlags flags)
-        => new EndConditionally(ImGui.EndTabBar, ImGui.BeginTabBar(label, flags));
+        => Conditional(ImGui.EndTabBar, ImGui.BeginTabBar(label, flags));
 
     public static IEndObject TabItem(string label)
-        => new EndConditionally(ImGui.EndTabItem, ImGui.BeginTabItem(label));
+        => Conditional(ImGui.EndTabItem, ImGui.BeginTabItem(label));
 
     public static unsafe IEndObject TabItem(byte* label, ImGuiTabItemFlags flags)
-        => new EndConditionally(ImGui.EndTabItem, ImGui.BeginTabItem(label, flags));
+        => Conditional(ImGui.EndTabItem, ImGui.BeginTabItem(label, flags));
 
     public static IEndObject TabItem(string label, ref bool open)
-        => new EndConditionally(ImGui.EndTabItem, ImGui.BeginTabItem(label, ref open));
+        => Conditional(ImGui.EndTabItem, ImGui.BeginTabItem(label, ref open));
 
     public static IEndObject TabItem(string label, ref bool open, ImGuiTabItemFlags flags)
-        => new EndConditionally(ImGui.EndTabItem, ImGui.BeginTabItem(label, ref open, flags));
+        => Conditional(ImGui.EndTabItem, ImGui.BeginTabItem(label, ref open, flags));
 
     public static IEndObject TreeNode(string label)
-        => new EndConditionally(ImGui.TreePop, ImGui.TreeNodeEx(label));
+        => Conditional(ImGui.TreePop, ImGui.TreeNodeEx(label));
 
     public static IEndObject TreeNode(string label, ImGuiTreeNodeFlags flags)
-        => new EndConditionally(flags.HasFlag(ImGuiTreeNodeFlags.NoTreePushOnOpen) ? Nop : ImGui.TreePop, ImGui.TreeNodeEx(label, flags));
+        => Conditional(flags.HasFlag(ImGuiTreeNodeFlags.NoTreePushOnOpen) ? Nop : ImGui.TreePop, ImGui.TreeNodeEx(label, flags));
 
     public static IEndObject Disabled()
     {
@@ -135,7 +139,7 @@ public static partial class ImRaii
     public static IEndObject Disabled(bool disabled)
     {
         if (!disabled)
-            return new EndConditionally(Nop, false);
+            return FailedEnd;
 
         ImGui.BeginDisabled();
         ++_disabledCount;
@@ -145,9 +149,12 @@ public static partial class ImRaii
     public static IEndObject Enabled()
     {
         var oldCount = _disabledCount;
-        if (oldCount == 0)
-            return new EndConditionally(Nop, false);
+        return oldCount == 0 ? FailedEnd : EnableAll(oldCount);
+    }
 
+    // Separate method so the closure over oldCount is only allocated when something is actually re-enabled.
+    private static IEndObject EnableAll(int oldCount)
+    {
         void Restore()
         {
             _disabledCount += oldCount;
@@ -240,6 +247,17 @@ public static partial class ImRaii
                 EndAction();
             Disposed = true;
         }
+    }
+
+    // A successful result must be its own object: its Disposed flag is what keeps a second Dispose from ending twice.
+    private static IEndObject Conditional(Action endAction, bool success)
+        => success ? new EndConditionally(endAction, true) : FailedEnd;
+
+    private static IEndObject CreateFailedEnd()
+    {
+        IEndObject end = new EndConditionally(Nop, false);
+        end.Dispose();
+        return end;
     }
 
     // Used to avoid tree pops when flag for no push is set.
