@@ -207,12 +207,29 @@ public class ItemSelector<T>
     protected virtual void OnDrop(object? data, int idx)
         => throw new NotImplementedException();
 
+    // 與 _flags.HasFlag(flag) 同義。Flags 是泛型型別裡的列舉，T 為參考型別時共用程式碼的 HasFlag 每次呼叫都要裝箱。
+    private bool Has(Flags flag)
+        => (_flags & flag) == flag;
+
     private unsafe void InternalDraw(int idx)
     {
         // Add a slight distance from the border so that the padding of a selectable fills the whole border.
         ImGui.SetCursorPosX(ImGui.GetCursorPosX() + ImGui.GetStyle().FramePadding.X);
         // Assume that OnDraw functions like a Selectable, if it returns true, select the value.
-        using var id = ImRaii.PushId(idx);
+        // 與 using ImRaii.PushId(idx) 相同（推一個、這一列畫完彈一個），每列少配置一個 Raii 物件。
+        ImGui.PushID(idx);
+        try
+        {
+            InternalDrawItem(idx);
+        }
+        finally
+        {
+            ImGui.PopID();
+        }
+    }
+
+    private unsafe void InternalDrawItem(int idx)
+    {
         if (OnDraw(idx) && idx != CurrentIdx)
         {
             CurrentIdx = idx;
@@ -220,7 +237,7 @@ public class ItemSelector<T>
         }
 
         // If the ItemSelector supports Move, every item is a Move-DragDropSource. The data is the index of the dragged element.
-        if (_flags.HasFlag(Flags.Move))
+        if (Has(Flags.Move))
         {
             using var source = ImRaii.DragDropSource();
             if (source)
@@ -255,7 +272,7 @@ public class ItemSelector<T>
 
     private void DrawFilter(float width)
     {
-        if (!_flags.HasFlag(Flags.Filter))
+        if (!Has(Flags.Filter))
             return;
 
         var       newFilter = Filter;
@@ -401,25 +418,25 @@ public class ItemSelector<T>
         using var font        = ImRaii.PushFont(UiBuilder.IconFont);
         var       buttonWidth = width / _numButtons;
 
-        if (_flags.HasFlag(Flags.Add))
+        if (Has(Flags.Add))
         {
             DrawAddButton(buttonWidth);
             ImGui.SameLine();
         }
 
-        if (_flags.HasFlag(Flags.Import))
+        if (Has(Flags.Import))
         {
             DrawImportButton(buttonWidth);
             ImGui.SameLine();
         }
 
-        if (_flags.HasFlag(Flags.Duplicate))
+        if (Has(Flags.Duplicate))
         {
             DrawDuplicateButton(buttonWidth);
             ImGui.SameLine();
         }
 
-        if (_flags.HasFlag(Flags.Delete))
+        if (Has(Flags.Delete))
         {
             DrawDeleteButton(buttonWidth);
             ImGui.SameLine();
