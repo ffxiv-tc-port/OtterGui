@@ -64,12 +64,23 @@ public class Table<T>
         VisibleColumns = Headers.Length;
     }
 
+    // Draw／DrawItem／表頭迴圈的 ID 與樣式直接推彈（與 ImRaii.PushId／PushStyle 推彈相同），每幀不配置 Raii 物件。
+    // ImRaii.Style 的靜態堆疊只供 ImRaii.DefaultStyle（教學視窗）用，表格內不會呼叫到。
+    private Action<(T, int)>? _drawItem;
+
     public void Draw(float itemHeight)
     {
         ItemHeight = itemHeight;
-        using var id = ImRaii.PushId(Label);
-        UpdateFilter();
-        DrawTableInternal();
+        ImGui.PushID(Label);
+        try
+        {
+            UpdateFilter();
+            DrawTableInternal();
+        }
+        finally
+        {
+            ImGui.PopID();
+        }
     }
 
     public bool WouldBeVisible(T value)
@@ -99,21 +110,24 @@ public class Table<T>
 
         var header = Headers[SortIdx];
         if (sortSpecs.Specs.SortDirection == ImGuiSortDirection.Ascending)
-        {
-            header.PreSort();
-            FilteredItems.StableSort((a, b) => header.Compare(a.Item1, b.Item1));
-            header.PostSort();
-        }
+            SortBy(header, true);
         else if (sortSpecs.Specs.SortDirection == ImGuiSortDirection.Descending)
-        {
-            header.PreSort();
-            FilteredItems.StableSort((a, b) => header.CompareInv(a.Item1, b.Item1));
-            header.PostSort();
-        }
+            SortBy(header, false);
         else
             SortIdx = -1;
         SortDirty            = false;
         sortSpecs.SpecsDirty = false;
+    }
+
+    // 捕捉 header 的閉包放在這裡：留在 SortInternal 會在方法入口配置，沒排序的每一幀也配置一次。
+    private void SortBy(Column<T> header, bool ascending)
+    {
+        header.PreSort();
+        if (ascending)
+            FilteredItems.StableSort((a, b) => header.Compare(a.Item1, b.Item1));
+        else
+            FilteredItems.StableSort((a, b) => header.CompareInv(a.Item1, b.Item1));
+        header.PostSort();
     }
 
     private void UpdateFilter()
@@ -136,15 +150,28 @@ public class Table<T>
 
     private void DrawItem((T, int) pair)
     {
-        var       column = 0;
-        using var id     = ImRaii.PushId(_currentIdx);
+        var column = 0;
+        ImGui.PushID(_currentIdx);
         _currentIdx = pair.Item2;
-        foreach (var header in Headers)
+        try
         {
-            id.Push(column++);
-            if (ImGui.TableNextColumn())
-                header.DrawColumn(pair.Item1, pair.Item2);
-            id.Pop();
+            foreach (var header in Headers)
+            {
+                ImGui.PushID(column++);
+                try
+                {
+                    if (ImGui.TableNextColumn())
+                        header.DrawColumn(pair.Item1, pair.Item2);
+                }
+                finally
+                {
+                    ImGui.PopID();
+                }
+            }
+        }
+        finally
+        {
+            ImGui.PopID();
         }
     }
 
@@ -166,22 +193,36 @@ public class Table<T>
         VisibleColumns = 0;
         foreach (var header in Headers)
         {
-            using var id = ImRaii.PushId(i);
-            if (ImGui.TableGetColumnFlags(i).HasFlag(ImGuiTableColumnFlags.IsEnabled))
-                ++VisibleColumns;
-            if (!ImGui.TableSetColumnIndex(i++))
-                continue;
+            ImGui.PushID(i);
+            try
+            {
+                if (ImGui.TableGetColumnFlags(i).HasFlag(ImGuiTableColumnFlags.IsEnabled))
+                    ++VisibleColumns;
+                if (!ImGui.TableSetColumnIndex(i++))
+                    continue;
 
-            using var style = ImRaii.PushStyle(ImGuiStyleVar.ItemSpacing, Vector2.Zero);
-            ImGui.TableHeader(string.Empty);
-            ImGui.SameLine();
-            style.Pop();
-            if (header.DrawFilter())
-                FilterDirty = true;
+                ImGui.PushStyleVar(ImGuiStyleVar.ItemSpacing, Vector2.Zero);
+                try
+                {
+                    ImGui.TableHeader(string.Empty);
+                    ImGui.SameLine();
+                }
+                finally
+                {
+                    ImGui.PopStyleVar();
+                }
+
+                if (header.DrawFilter())
+                    FilterDirty = true;
+            }
+            finally
+            {
+                ImGui.PopID();
+            }
         }
 
         SortInternal();
         _currentIdx = 0;
-        ImGuiClip.ClippedDraw(FilteredItems, DrawItem, ItemHeight);
+        ImGuiClip.ClippedDraw(FilteredItems, _drawItem ??= DrawItem, ItemHeight);
     }
 }

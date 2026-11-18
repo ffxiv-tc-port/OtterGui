@@ -10,8 +10,24 @@ public class Column<TItem>
     public virtual float Width
         => -1f;
 
+    private string? _filterLabelSource;
+    private string  _filterLabel = string.Empty;
+
+    // 同 $"##{Label}Filter"；表頭每幀讀它，Label 換成別的字串才重組。
     public string FilterLabel
-        => $"##{Label}Filter";
+    {
+        get
+        {
+            var label = Label;
+            if (label is null || !ReferenceEquals(label, _filterLabelSource))
+            {
+                _filterLabel       = $"##{label}Filter";
+                _filterLabelSource = label;
+            }
+
+            return _filterLabel;
+        }
+    }
 
     public virtual bool DrawFilter()
     {

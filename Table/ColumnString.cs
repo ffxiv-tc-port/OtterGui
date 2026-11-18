@@ -17,10 +17,22 @@ public class ColumnString<TItem> : Column<TItem>
     public override int Compare(TItem lhs, TItem rhs)
         => string.Compare(ToName(lhs), ToName(rhs), StringComparison.InvariantCulture);
 
+    // 與 using ImRaii.PushStyle(FrameRounding, 0) 推彈相同，每幀不配置 Raii 物件。
     public override bool DrawFilter()
     {
-        using var style = Raii.ImRaii.PushStyle(ImGuiStyleVar.FrameRounding, 0);
+        ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, 0);
+        try
+        {
+            return DrawFilterInput();
+        }
+        finally
+        {
+            ImGui.PopStyleVar();
+        }
+    }
 
+    private bool DrawFilterInput()
+    {
         ImGui.SetNextItemWidth(-Table.ArrowWidth * ImGuiHelpers.GlobalScale);
         var tmp = FilterValue;
         if (!ImGui.InputTextWithHint(FilterLabel, Label, ref tmp, 256) || tmp == FilterValue)

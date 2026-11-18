@@ -29,13 +29,41 @@ public class ColumnFlags<T, TItem> : Column<TItem> where T : struct, Enum
         return ImUtf8.Checkbox(Names[idx], ref ret);
     }
 
+    // 樣式與顏色直接推彈，順序與 using ImRaii.PushStyle／PushColor 相同（先結束下拉、再彈顏色、再彈樣式），每幀不配置 Raii 物件。
     public override bool DrawFilter()
     {
-        using var id    = ImUtf8.PushId(FilterLabel);
-        using var style = ImRaii.PushStyle(ImGuiStyleVar.FrameRounding, 0);
+        using var id = ImUtf8.PushId(FilterLabel);
+        ImGui.PushStyleVar(ImGuiStyleVar.FrameRounding, 0);
+        try
+        {
+            return DrawFilterCombo();
+        }
+        finally
+        {
+            ImGui.PopStyleVar();
+        }
+    }
+
+    private bool DrawFilterCombo()
+    {
         ImGui.SetNextItemWidth(-Table.ArrowWidth * ImGuiHelpers.GlobalScale);
-        var       all   = FilterValue.HasFlag(AllFlags);
-        using var color = ImRaii.PushColor(ImGuiCol.FrameBg, 0x803030A0, !all);
+        var all         = FilterValue.HasFlag(AllFlags);
+        var colorPushed = !all;
+        if (colorPushed)
+            ImGui.PushStyleColor(ImGuiCol.FrameBg, 0x803030A0);
+        try
+        {
+            return DrawFilterComboBody(all, ref colorPushed);
+        }
+        finally
+        {
+            if (colorPushed)
+                ImGui.PopStyleColor();
+        }
+    }
+
+    private bool DrawFilterComboBody(bool all, ref bool colorPushed)
+    {
         using var combo = ImUtf8.Combo(""u8, Label, ComboFlags);
 
         if (ImGui.IsItemClicked(ImGuiMouseButton.Right))
@@ -50,7 +78,11 @@ public class ColumnFlags<T, TItem> : Column<TItem> where T : struct, Enum
         if (!combo)
             return false;
 
-        color.Pop();
+        if (colorPushed)
+        {
+            ImGui.PopStyleColor();
+            colorPushed = false;
+        }
 
         var ret = false;
         if (ImUtf8.Checkbox("Enable All"u8, ref all))
